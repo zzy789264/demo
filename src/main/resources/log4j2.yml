@@ -1,0 +1,145 @@
+# 共有8个级别，按照从低到高为：ALL < TRACE < DEBUG < INFO < WARN < ERROR < FATAL < OFF。
+Configuration:
+  status: warn
+  monitorInterval: 1800
+  # 定义全局变量
+  Properties:
+    Property:
+    #控制台日志级别
+    - name: log.level.console
+      value: info
+    #项目日志级别
+    - name: log.level.project
+      value: debug
+    #日志保存位置
+    - name: log.path
+      value: D://logs
+    #项目名称，也是日志的项目名字
+    - name: project.name
+      value: dispatch
+    - name: log.pattern
+      value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %c{2}.%M()/%L -> %m %x %n"
+    - name: every_file_size
+      value: 200M
+
+
+  Appenders:
+    Console:
+      #控制台只输出level及以上级别的信息（onMatch），其他的直接拒绝（onMismatch）
+      name: CONSOLE
+      target: SYSTEM_OUT
+      ThresholdFilter:
+        level: ${sys:log.level.console}
+        onMatch: ACCEPT
+        onMismatch: DENY
+      PatternLayout:
+        pattern: ${sys:log.pattern}
+    
+    RollingFile:
+    - name: ROLLING_DEBUG
+      fileName: ${sys:log.path}/${project.name}_debug.log
+      filePattern: ${sys:log.path}/history/${project.name}_debug-%d{yyyy-MM-dd}-%i.log.gz
+      PatternLayout:
+        pattern: ${sys:log.pattern}
+      Filters:
+        #先去除不接受的日志级别，然后获取需要接受的日志级别
+        ThresholdFilter:
+        - level: info
+          onMatch: DENY
+          onMismatch: NEUTRAL
+        - level: debug
+          onMatch: ACCEPT
+          onMismatch: DENY
+      Policies:
+        # 按天分类
+        TimeBasedTriggeringPolicy:
+          modulate: true
+          interval: 1
+      # 文件最多100个
+      DefaultRolloverStrategy:
+        max: 100
+    
+    - name: ROLLING_INFO
+      fileName: ${sys:log.path}/${project.name}_info.log
+      filePattern: ${sys:log.path}/history/${project.name}_info-%d{yyyy-MM-dd}-%i.log.gz
+      PatternLayout:
+        pattern: ${sys:log.pattern}
+      Filters:
+        ThresholdFilter:
+        - level: warn
+          onMatch: DENY
+          onMismatch: NEUTRAL
+        - level: info
+          onMatch: ACCEPT
+          onMismatch: DENY
+      Policies:
+        TimeBasedTriggeringPolicy:
+          modulate: true
+          interval: 1
+      DefaultRolloverStrategy:
+        max: 100
+        
+    - name: ROLLING_ERROR
+      fileName: ${sys:log.path}/${project.name}_error.log
+      filePattern: ${sys:log.path}/history/${project.name}_error-%d{yyyy-MM-dd}-%i.log.gz
+      PatternLayout:
+        pattern: ${sys:log.pattern}
+      Filters:
+        ThresholdFilter:
+          level: warn
+          onMatch: ACCEPT
+          onMismatch: DENY
+      Policies:
+        TimeBasedTriggeringPolicy:
+          modulate: true
+          interval: 1
+      DefaultRolloverStrategy:
+        max: 100
+    
+    - name: ROLLING_WEB
+      fileName: ${sys:log.path}/${project.name}_web.log
+      filePattern: ${sys:log.path}/history/${project.name}_web-%d{yyyy-MM-dd}-%i.log.gz
+      PatternLayout:
+        pattern: ${sys:log.pattern}
+      Filters:
+        ThresholdFilter:
+          level: INFO
+          onMatch: ACCEPT
+          onMismatch: DENY
+      Policies:
+        TimeBasedTriggeringPolicy:
+          modulate: true
+          interval: 1
+      DefaultRolloverStrategy:
+        max: 100
+    
+    - name: druidSqlRollingFile
+      fileName: ${sys:log.path}/${project.name}_druid.log
+      filePattern: ${sys:log.path}/history/${project.name}_druid-%d{yyyy-MM-dd}-%i.log.gz
+      PatternLayout:
+        pattern: ${sys:log.pattern}
+      Policies:
+        SizeBasedTriggeringPolicy:
+          size: "500 MB"
+        TimeBasedTriggeringPolicy:
+          modulate: true
+          interval: 1
+
+  Loggers:
+    Root:
+      level: ${sys:log.level.project}
+      includeLocation: true
+      AppenderRef:
+      - ref: CONSOLE
+      - ref: ROLLING_DEBUG
+      - ref: ROLLING_INFO
+      - ref: ROLLING_ERROR
+      - ref: ROLLING_WEB
+    
+    logger:
+      name: druid.sql.Statement
+      level: debug
+      additivity: false
+      appender-ref:
+        ref: druidSqlRollingFile
+
